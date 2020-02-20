@@ -1,4 +1,4 @@
-package me.kmjoo91.githubapiassistant.repository.model;
+package me.kmjoo91.githubapiassistant.common.model;
 
 import java.time.LocalDateTime;
 

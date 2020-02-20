@@ -1,8 +1,8 @@
-package me.kmjoo91.githubapiassistant.repository.model;
+package me.kmjoo91.githubapiassistant.singlecommit.model;
 
-public class Committer {
+public class Author {
 	private String login;
-	private int id;
+	private String id;
 	private String nodeId;
 	private String avatarUrl;
 	private String gravatarId;

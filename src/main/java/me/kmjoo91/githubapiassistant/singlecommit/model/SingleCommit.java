@@ -1,6 +1,10 @@
-package me.kmjoo91.githubapiassistant.repository.model;
+package me.kmjoo91.githubapiassistant.singlecommit.model;
 
 import java.util.List;
+
+import me.kmjoo91.githubapiassistant.common.model.Commit;
+import me.kmjoo91.githubapiassistant.common.model.Committer;
+import me.kmjoo91.githubapiassistant.common.model.Parent;
 
 public class SingleCommit {
 	private String sha;

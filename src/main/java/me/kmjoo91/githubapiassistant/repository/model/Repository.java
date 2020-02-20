@@ -2,6 +2,9 @@ package me.kmjoo91.githubapiassistant.repository.model;
 
 import java.time.LocalDateTime;
 
+import lombok.Getter;
+
+@Getter
 public class Repository {
 	private int id;
 	private String nodeId;
@@ -70,10 +73,19 @@ public class Repository {
 	private boolean archived;
 	private boolean disabled;
 	private int openIssuesCount;
-	private String license;
+	private License license;
 	private int forks;
 	private int openIssues;
 	private int watchers;
 	private String defaultBranch;
 	private Permissions permissions;
+
+	@Getter
+	private class License {
+		private String key;
+		private String name;
+		private String spdxId;
+		private String url;
+		private String nodeId;
+	}
 }

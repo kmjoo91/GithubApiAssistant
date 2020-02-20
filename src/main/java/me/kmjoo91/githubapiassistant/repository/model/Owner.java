@@ -1,5 +1,8 @@
 package me.kmjoo91.githubapiassistant.repository.model;
 
+import lombok.Getter;
+
+@Getter
 public class Owner {
 	private String login;
 	private int id;
