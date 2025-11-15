@@ -1,0 +1,9 @@
+github:
+  api:
+    base-url: https://api.github.com
+    timeout: 30000
+    max-retry: 3
+    retry-delay: 2000
+    rate-limit:
+      requests-per-hour: 5000
+
