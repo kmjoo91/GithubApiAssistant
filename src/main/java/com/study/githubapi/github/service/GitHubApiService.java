@@ -5,10 +5,12 @@ import com.study.githubapi.github.dto.ContributorStats;
 import com.study.githubapi.github.dto.GitHubRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -29,10 +31,8 @@ public class GitHubApiService {
      * 조직의 모든 레포지토리를 페이징 처리로 가져옴
      */
     public Flux<GitHubRepository> getOrganizationRepositories(String org, String token, boolean includeForks, boolean includeArchived) {
-        WebClient webClient = gitHubApiConfig.createWebClientWithToken(token);
-        
         return Flux.range(1, Integer.MAX_VALUE)
-                .concatMap(page -> getRepositoriesPage(org, page, includeForks, includeArchived, webClient))
+                .concatMap(page -> getRepositoriesPage(org, page, includeForks, includeArchived, token))
                 .takeWhile(repositories -> !repositories.isEmpty())
                 .flatMapIterable(repositories -> repositories)
                 .doOnNext(repo -> log.debug("Retrieved repository: {} (fork: {}, archived: {})", 
@@ -44,10 +44,8 @@ public class GitHubApiService {
      * 사용자의 모든 레포지토리를 페이징 처리로 가져옴
      */
     public Flux<GitHubRepository> getUserRepositories(String username, String token, boolean includeForks, boolean includeArchived) {
-        WebClient webClient = gitHubApiConfig.createWebClientWithToken(token);
-        
         return Flux.range(1, Integer.MAX_VALUE)
-                .concatMap(page -> getUserRepositoriesPage(username, page, includeForks, includeArchived, webClient))
+                .concatMap(page -> getUserRepositoriesPage(username, page, includeForks, includeArchived, token))
                 .takeWhile(repositories -> !repositories.isEmpty())
                 .flatMapIterable(repositories -> repositories)
                 .doOnNext(repo -> log.debug("Retrieved repository: {} (fork: {}, archived: {})", 
@@ -55,11 +53,12 @@ public class GitHubApiService {
                 .doOnComplete(() -> log.info("Completed fetching repositories for user: {}", username));
     }
     
-    private Mono<List<GitHubRepository>> getUserRepositoriesPage(String username, int page, boolean includeForks, boolean includeArchived, WebClient webClient) {
+    private Mono<List<GitHubRepository>> getUserRepositoriesPage(String username, int page, boolean includeForks, boolean includeArchived, String token) {
         var uri = "/users/{username}/repos?page={page}&per_page=100&sort=updated&direction=desc";
         
-        return webClient.get()
+        return gitHubWebClient.get()
                 .uri(uri, username, page)
+                .headers(headers -> applyAuthorizationHeader(headers, token))
                 .retrieve()
                 .bodyToFlux(GitHubRepository.class)
                 .filter(repo -> (includeForks || !repo.isFork()) && (includeArchived || !repo.isArchived()))
@@ -71,11 +70,12 @@ public class GitHubApiService {
                 .onErrorReturn(Collections.emptyList());
     }
     
-    private Mono<List<GitHubRepository>> getRepositoriesPage(String org, int page, boolean includeForks, boolean includeArchived, WebClient webClient) {
+    private Mono<List<GitHubRepository>> getRepositoriesPage(String org, int page, boolean includeForks, boolean includeArchived, String token) {
         var uri = "/orgs/{org}/repos?page={page}&per_page=100&sort=updated&direction=desc";
         
-        return webClient.get()
+        return gitHubWebClient.get()
                 .uri(uri, org, page)
+                .headers(headers -> applyAuthorizationHeader(headers, token))
                 .retrieve()
                 .bodyToFlux(GitHubRepository.class)
                 .filter(repo -> (includeForks || !repo.isFork()) && (includeArchived || !repo.isArchived()))
@@ -93,10 +93,9 @@ public class GitHubApiService {
      */
     public Mono<List<ContributorStats>> getRepositoryContributorStats(String owner, String repo, String token) {
         var uri = "/repos/{owner}/{repo}/stats/contributors";
-        WebClient webClient = gitHubApiConfig.createWebClientWithToken(token);
-        
-        return webClient.get()
+        return gitHubWebClient.get()
                 .uri(uri, owner, repo)
+                .headers(headers -> applyAuthorizationHeader(headers, token))
                 .retrieve()
                 .bodyToFlux(ContributorStats.class)
                 .collectList()
@@ -127,14 +126,21 @@ public class GitHubApiService {
      * API Rate Limit 상태 확인
      */
     public Mono<String> getRateLimitStatus(String token) {
-        WebClient webClient = gitHubApiConfig.createWebClientWithToken(token);
-        
-        return webClient.get()
+        return gitHubWebClient.get()
                 .uri("/rate_limit")
+                .headers(headers -> applyAuthorizationHeader(headers, token))
                 .retrieve()
                 .bodyToMono(String.class)
                 .doOnNext(response -> log.info("Rate limit status: {}", response))
                 .onErrorReturn("Unable to fetch rate limit status");
+    }
+
+    private void applyAuthorizationHeader(HttpHeaders headers, String token) {
+        if (StringUtils.hasText(token)) {
+            headers.setBearerAuth(token);
+        } else {
+            headers.remove(HttpHeaders.AUTHORIZATION);
+        }
     }
 }
 
